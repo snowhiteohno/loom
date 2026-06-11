@@ -8,6 +8,13 @@ Loom is a calm, editorial chat companion for students — talk to it like a
 thoughtful advisor, and it weaves what matters about you into a lasting memory
 that quietly shapes every future conversation.
 
+<br />
+
+<img src="public/preview.png" alt="Loom" width="840" />
+
+<br />
+<br />
+
 [**Live demo →**](https://loom-eqtv.vercel.app)
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)
