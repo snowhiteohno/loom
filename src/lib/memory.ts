@@ -6,15 +6,17 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 const ALLOWED_CATEGORIES = ['academic', 'career', 'personal', 'profile_base'] as const;
 type Category = (typeof ALLOWED_CATEGORIES)[number];
 
+const DEDUP_THRESHOLD = 0.8;
+
 const EXTRACTION_INSTRUCTION = `you analyze a short exchange between a user and their advisor "Loom".
 
 your job: extract durable facts about the user that would help Loom remember them across future conversations.
 
 categories (you MUST use one of exactly these four):
-- "profile_base" — biographical basics (location, age, year in college, major)
-- "academic" — courses, deadlines, projects, school details
-- "career" — career interests, fields they want to explore, role aspirations
-- "personal" — relationships, hobbies, preferences, daily life, routines, food, communication style
+- "profile_base": biographical basics (location, age, year in college, major)
+- "academic": courses, deadlines, projects, school details
+- "career": career interests, fields they want to explore, role aspirations
+- "personal": relationships, hobbies, preferences, daily life, routines, food, communication style
 
 DO NOT extract:
 - transient feelings ("stressed today")
@@ -128,18 +130,56 @@ export async function extractAndSaveMemories(
             console.error('[memory] embedding failed, saving without:', err);
         }
 
-        const rows = normalized.map((m, i) => ({
-            user_id: userId,
-            content: m.content,
-            category: m.category,
-            embedding: embeddings[i] ?? null,
-        }));
+        const rowsToInsert: {
+            user_id: string;
+            content: string;
+            category: Category;
+            embedding: number[] | null;
+        }[] = [];
 
-        const { error } = await supabase.from('memories').insert(rows);
+        for (let i = 0; i < normalized.length; i++) {
+            const candidate = normalized[i];
+            const candidateEmbedding = embeddings[i];
+
+            if (candidateEmbedding) {
+                const { data: similar } = await supabase.rpc('match_memories', {
+                    query_embedding: candidateEmbedding,
+                    match_count: 1,
+                });
+
+                if (
+                    similar &&
+                    similar.length > 0 &&
+                    similar[0].similarity > DEDUP_THRESHOLD
+                ) {
+                    console.log(
+                        `[memory] skipped duplicate (sim ${similar[0].similarity.toFixed(2)}): "${candidate.content}" ~ "${similar[0].content}"`
+                    );
+                    continue;
+                }
+            }
+
+            rowsToInsert.push({
+                user_id: userId,
+                content: candidate.content,
+                category: candidate.category,
+                embedding: candidateEmbedding ?? null,
+            });
+        }
+
+        if (rowsToInsert.length === 0) {
+            console.log('[memory] all candidates were duplicates, nothing new to save');
+            return;
+        }
+
+        const { error } = await supabase.from('memories').insert(rowsToInsert);
         if (error) {
             console.error('[memory] insert failed:', error);
         } else {
-            console.log(`[memory] saved ${rows.length} memories`);
+            const skipped = normalized.length - rowsToInsert.length;
+            console.log(
+                `[memory] saved ${rowsToInsert.length} new memories, skipped ${skipped} duplicates`
+            );
         }
     } catch (err) {
         console.error('[memory] extraction error:', err);
