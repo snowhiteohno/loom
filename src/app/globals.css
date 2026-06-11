@@ -158,10 +158,56 @@
 
 body {
   font-family: var(--font-sans), system-ui, sans-serif;
+  /* Soft editorial glow: a warm light bleeding from the top, faint grain below */
+  background-color: var(--background);
+  background-image:
+    radial-gradient(120% 80% at 50% -20%, oklch(0.62 0.13 50 / 0.10), transparent 60%),
+    radial-gradient(80% 60% at 100% 0%, oklch(0.66 0.1 80 / 0.06), transparent 55%);
+  background-attachment: fixed;
 }
 
 .font-display {
   font-family: var(--font-display), Georgia, serif;
+}
+
+/* A warm gradient ink for emphasis text */
+.text-gradient {
+  background-image: linear-gradient(135deg, var(--foreground), var(--primary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Hairline that fades at both ends */
+.rule-fade {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+
+/* Quietly styled scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.6 0.05 50 / 0.25) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: oklch(0.6 0.05 50 / 0.22);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.6 0.08 50 / 0.4);
+}
+
+::selection {
+  background: oklch(0.58 0.13 50 / 0.22);
 }
 
 /* Subtle twinkle for decorative sparkles */
@@ -170,13 +216,166 @@ body {
   0%,
   100% {
     opacity: 0.25;
+    transform: scale(1);
   }
 
   50% {
-    opacity: 0.7;
+    opacity: 0.75;
+    transform: scale(1.15);
   }
 }
 
 .animate-twinkle {
   animation: twinkle 7s ease-in-out infinite;
+}
+
+/* Entrance: fade + rise */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out both;
+}
+
+/* Three-dot thinking indicator */
+@keyframes loom-dot {
+
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+    transform: translateY(0);
+  }
+
+  40% {
+    opacity: 0.9;
+    transform: translateY(-3px);
+  }
+}
+
+.loom-dots span {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 4px;
+  border-radius: 9999px;
+  background: var(--primary);
+  animation: loom-dot 1.3s ease-in-out infinite;
+}
+
+.loom-dots span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.loom-dots span:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+/* Markdown prose inside loom's replies */
+.prose-loom> :first-child {
+  margin-top: 0;
+}
+
+.prose-loom> :last-child {
+  margin-bottom: 0;
+}
+
+.prose-loom p {
+  margin: 0.6em 0;
+  line-height: 1.7;
+}
+
+.prose-loom strong {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.prose-loom em {
+  font-style: italic;
+}
+
+.prose-loom a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose-loom ul,
+.prose-loom ol {
+  margin: 0.6em 0;
+  padding-left: 1.3em;
+}
+
+.prose-loom ul {
+  list-style: disc;
+}
+
+.prose-loom ol {
+  list-style: decimal;
+}
+
+.prose-loom li {
+  margin: 0.25em 0;
+}
+
+.prose-loom code {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.875em;
+  background: oklch(0.6 0.05 50 / 0.12);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+.prose-loom pre {
+  background: oklch(0.6 0.05 50 / 0.1);
+  padding: 0.9em 1em;
+  border-radius: 10px;
+  overflow-x: auto;
+  margin: 0.8em 0;
+}
+
+.prose-loom pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.prose-loom blockquote {
+  border-left: 2px solid var(--primary);
+  padding-left: 0.9em;
+  margin: 0.7em 0;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .animate-twinkle,
+  .animate-fade-up,
+  .animate-fade-in,
+  .loom-dots span {
+    animation: none;
+  }
 }

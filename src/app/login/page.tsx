@@ -27,8 +27,8 @@ export default function LoginPage() {
             </div>
 
             {/* Main */}
-            <div className="max-w-2xl text-center space-y-8 relative">
-                <h1 className="font-display italic text-8xl md:text-[11rem] font-light leading-none tracking-tight">
+            <div className="max-w-2xl text-center space-y-8 relative animate-fade-up">
+                <h1 className="font-display italic text-8xl md:text-[11rem] font-light leading-none tracking-tight text-gradient">
                     Loom
                 </h1>
 

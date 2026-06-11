@@ -21,7 +21,7 @@ export default async function HomePage() {
         you&apos;re in.
       </div>
 
-      <div className="max-w-2xl text-center space-y-8 relative">
+      <div className="max-w-2xl text-center space-y-8 relative animate-fade-up">
         <h1 className="font-display italic text-6xl md:text-8xl font-light leading-none tracking-tight">
           hi, {name}<span className="text-primary">.</span>
         </h1>
