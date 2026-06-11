@@ -135,6 +135,8 @@
 :root {
   --background: oklch(0.973 0.012 80);
   --foreground: oklch(0.18 0.01 30);
+  --card: oklch(0.99 0.008 80);
+  --card-foreground: oklch(0.18 0.01 30);
   --muted: oklch(0.92 0.01 80);
   --muted-foreground: oklch(0.4 0.01 30);
   --primary: oklch(0.58 0.13 50);
@@ -143,17 +145,19 @@
   --ring: oklch(0.58 0.13 50);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: oklch(0.13 0.01 60);
-    --foreground: oklch(0.97 0.01 80);
-    --muted: oklch(0.18 0.01 60);
-    --muted-foreground: oklch(0.7 0.01 80);
-    --primary: oklch(0.66 0.14 50);
-    --primary-foreground: oklch(0.13 0.01 60);
-    --border: oklch(0.22 0.01 60);
-    --ring: oklch(0.66 0.14 50);
-  }
+/* Manual theme is authoritative via the .dark class (set before paint by the
+   inline script in layout.tsx). */
+.dark {
+  --background: oklch(0.13 0.01 60);
+  --foreground: oklch(0.97 0.01 80);
+  --card: oklch(0.17 0.01 60);
+  --card-foreground: oklch(0.97 0.01 80);
+  --muted: oklch(0.18 0.01 60);
+  --muted-foreground: oklch(0.7 0.01 80);
+  --primary: oklch(0.7 0.15 50);
+  --primary-foreground: oklch(0.13 0.01 60);
+  --border: oklch(0.27 0.01 60);
+  --ring: oklch(0.7 0.15 50);
 }
 
 body {

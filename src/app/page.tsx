@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import ThreadsBackground from '@/components/ThreadsBackground'
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -17,6 +18,7 @@ export default async function HomePage() {
 
   return (
     <main className="relative min-h-screen flex items-center justify-center px-8 md:px-16 py-16 md:py-20 overflow-hidden">
+      <ThreadsBackground intensity="hero" />
       <div className="absolute top-12 left-12 md:top-16 md:left-20 font-display italic text-sm text-foreground/55">
         you&apos;re in.
       </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
+import ThreadsBackground from '@/components/ThreadsBackground'
 
 export default function LoginPage() {
     const handleGitHubSignIn = async () => {
@@ -15,6 +16,7 @@ export default function LoginPage() {
 
     return (
         <main className="relative min-h-screen flex items-center justify-center px-8 md:px-16 py-16 md:py-20 overflow-hidden">
+            <ThreadsBackground intensity="hero" />
             {/* Scattered sparkles, staggered twinkles */}
             <div className="absolute top-32 left-[18%] text-primary/40 text-2xl select-none animate-twinkle" style={{ animationDelay: '0s' }}>✦</div>
             <div className="absolute bottom-40 right-[22%] text-primary/30 text-xl select-none animate-twinkle" style={{ animationDelay: '2s' }}>✦</div>

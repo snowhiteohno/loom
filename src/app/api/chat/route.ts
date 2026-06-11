@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
 
     // Retrieve relevant memories and inject into system instruction
     let systemInstruction = BASE_SYSTEM_INSTRUCTION;
+    let memoriesUsed = 0;
     if (lastMessage?.role === 'user') {
         const memories = await retrieveRelevantMemories(
             supabase,
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
             8
         );
         if (memories.length > 0) {
+            memoriesUsed = memories.length;
             const memoryLines = memories.map((m) => `- ${m.content}`).join('\n');
             systemInstruction += `\n\nthings you remember about this person (don't list these back, just let them shape your reply):\n${memoryLines}`;
             console.log(`[memory] injected ${memories.length} memories into context`);
@@ -134,6 +136,7 @@ export async function POST(req: NextRequest) {
             'Content-Type': 'text/plain; charset=utf-8',
             'X-Content-Type-Options': 'nosniff',
             'X-Conversation-Id': conversationId,
+            'X-Memories-Used': String(memoriesUsed),
         },
     });
 }
