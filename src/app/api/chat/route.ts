@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { NextRequest } from 'next/server';
+import { NextRequest, after } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { extractAndSaveMemories, retrieveRelevantMemories } from '@/lib/memory';
 
@@ -22,7 +22,17 @@ export async function POST(req: NextRequest) {
     };
     let conversationId: string;
     if (incomingId) {
-        conversationId = incomingId;
+        // Verify the conversation belongs to this user before writing to it.
+        const { data: owned } = await supabase
+            .from('conversations')
+            .select('id')
+            .eq('id', incomingId)
+            .eq('user_id', user.id)
+            .maybeSingle();
+        if (!owned) {
+            return new Response('Conversation not found', { status: 404 });
+        }
+        conversationId = owned.id;
     } else {
         const { data: conv, error } = await supabase
             .from('conversations')
@@ -84,7 +94,17 @@ export async function POST(req: NextRequest) {
                         controller.enqueue(encoder.encode(text));
                     }
                 }
-                if (accumulated) {
+                controller.close();
+            } catch (err) {
+                controller.error(err);
+                return;
+            }
+
+            // Persist + extract memories after the response is sent. `after`
+            // keeps the work alive on serverless platforms (Vercel), where work
+            // started after controller.close() would otherwise be killed.
+            if (accumulated) {
+                after(async () => {
                     await supabase.from('messages').insert({
                         conversation_id: conversationId,
                         role: 'assistant',
@@ -94,21 +114,17 @@ export async function POST(req: NextRequest) {
                         .from('conversations')
                         .update({ updated_at: new Date().toISOString() })
                         .eq('id', conversationId);
-                }
-                controller.close();
-            } catch (err) {
-                controller.error(err);
-                return;
-            }
 
-            if (accumulated && lastMessage?.role === 'user') {
-                await extractAndSaveMemories(
-                    supabase,
-                    user.id,
-                    conversationId,
-                    lastMessage.content,
-                    accumulated
-                );
+                    if (lastMessage?.role === 'user') {
+                        await extractAndSaveMemories(
+                            supabase,
+                            user.id,
+                            conversationId,
+                            lastMessage.content,
+                            accumulated
+                        );
+                    }
+                });
             }
         },
     });

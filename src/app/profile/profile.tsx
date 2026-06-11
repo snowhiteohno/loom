@@ -31,7 +31,7 @@ export default function Profile({
 
     async function signOut() {
         await supabase.auth.signOut();
-        window.location.href = '/login';
+        window.location.assign('/login');
     }
 
     async function deleteMemory(id: string) {

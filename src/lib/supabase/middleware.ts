@@ -1,7 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+// Refreshes the Supabase session on every request and keeps the auth cookies
+// in sync between the request and the response. This MUST be wired up from
+// `src/middleware.ts` for Next.js to actually run it.
+export async function updateSession(request: NextRequest) {
     let response = NextResponse.next({ request })
 
     const supabase = createServerClient(
@@ -25,14 +28,9 @@ export async function middleware(request: NextRequest) {
         }
     )
 
-    // Refreshes the session if expired
+    // IMPORTANT: do not run code between creating the client and getUser().
+    // Refreshes the session if expired.
     await supabase.auth.getUser()
 
     return response
-}
-
-export const config = {
-    matcher: [
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-    ],
 }
