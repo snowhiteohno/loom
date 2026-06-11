@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function HomePage() {
@@ -28,7 +29,7 @@ export default async function HomePage() {
         <p className="font-display text-xl md:text-2xl text-foreground/90 leading-relaxed max-w-md mx-auto">
           your loom is ready,
           <br />
-          but the rest of the app isn&apos;t built yet.
+          whenever you are.
         </p>
 
         <div className="flex items-center justify-center gap-4 pt-2">
@@ -36,6 +37,14 @@ export default async function HomePage() {
           <span className="text-primary/60 text-sm shrink-0">✦</span>
           <span className="h-px w-10 sm:w-12 bg-foreground/20"></span>
         </div>
+
+        <Link
+          href="/chat"
+          className="group relative font-display italic text-lg text-foreground/80 hover:text-primary transition-colors duration-500 cursor-pointer inline-block tracking-normal hover:tracking-wide"
+        >
+          enter loom
+          <span className="absolute -bottom-1 left-0 h-px w-0 bg-primary transition-all duration-500 ease-out group-hover:w-full"></span>
+        </Link>
       </div>
 
       <div className="absolute bottom-12 right-12 md:bottom-16 md:right-20 font-display italic text-sm text-foreground/55">
