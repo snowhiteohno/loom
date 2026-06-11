@@ -374,12 +374,71 @@ body {
   font-style: italic;
 }
 
+/* Drifting pools of warm light (AmbientBackground) */
+.aurora-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(72px);
+  will-change: transform;
+  animation-duration: 26s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes aurora-a {
+
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate(7%, 6%) scale(1.12);
+  }
+}
+
+@keyframes aurora-b {
+
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1.05);
+  }
+
+  50% {
+    transform: translate(-8%, 4%) scale(0.95);
+  }
+}
+
+@keyframes aurora-c {
+
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate(5%, -7%) scale(1.1);
+  }
+}
+
+/* Stagger so they don't pulse in unison */
+.aurora-blob:nth-child(2) {
+  animation-duration: 34s;
+  animation-delay: -6s;
+}
+
+.aurora-blob:nth-child(3) {
+  animation-duration: 30s;
+  animation-delay: -12s;
+}
+
 @media (prefers-reduced-motion: reduce) {
 
   .animate-twinkle,
   .animate-fade-up,
   .animate-fade-in,
-  .loom-dots span {
+  .loom-dots span,
+  .aurora-blob {
     animation: none;
   }
 }

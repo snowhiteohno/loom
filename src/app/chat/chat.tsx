@@ -5,7 +5,7 @@ import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { createClient } from '@/lib/supabase/client';
-import ThreadsBackground from '@/components/ThreadsBackground';
+import AmbientBackground from '@/components/AmbientBackground';
 import ThemeToggle from '@/components/ThemeToggle';
 import type { ConversationSummary } from './page';
 
@@ -189,7 +189,7 @@ export default function Chat({
 
     return (
         <div className="flex h-screen overflow-hidden">
-            <ThreadsBackground intensity="ambient" />
+            <AmbientBackground intensity="ambient" />
 
             {/* Sidebar */}
             <aside
