@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import AmbientBackground from '@/components/AmbientBackground';
+import { toast } from '@/components/Toaster';
 
 type Memory = {
     id: string;
@@ -35,6 +37,7 @@ export default function Profile({
 }) {
     const [memories, setMemories] = useState<Memory[]>(initialMemories);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [query, setQuery] = useState('');
     const supabase = createClient();
 
     async function signOut() {
@@ -47,19 +50,28 @@ export default function Profile({
         const { error } = await supabase.from('memories').delete().eq('id', id);
         if (!error) {
             setMemories((prev) => prev.filter((m) => m.id !== id));
+            toast('forgotten');
         }
         setDeletingId(null);
     }
 
+    const filtered = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        if (!q) return memories;
+        return memories.filter((m) => m.content.toLowerCase().includes(q));
+    }, [memories, query]);
+
     const grouped: Record<string, Memory[]> = {};
     for (const cat of CATEGORY_ORDER) {
-        grouped[cat] = memories.filter((m) => m.category === cat);
+        grouped[cat] = filtered.filter((m) => m.category === cat);
     }
 
     const total = memories.length;
+    const noMatches = total > 0 && filtered.length === 0;
 
     return (
         <div className="min-h-screen">
+            <AmbientBackground intensity="ambient" />
             <header className="px-8 py-5 md:px-12 md:py-6 flex items-center justify-between border-b border-border/40 backdrop-blur-sm sticky top-0 z-10">
                 <Link
                     href="/chat"
@@ -85,9 +97,30 @@ export default function Profile({
                         everything loom has learned from your conversations. forget anything you don&apos;t want me to keep.
                     </p>
                     {total > 0 && (
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-foreground/35 mb-14">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-foreground/35 mb-6">
                             {total} {total === 1 ? 'memory' : 'memories'} kept
                         </p>
+                    )}
+
+                    {total > 0 && (
+                        <div className="mb-12 flex items-center gap-3 rounded-xl border border-border/60 bg-card/40 px-4 py-2.5 focus-within:border-primary/40 transition-colors">
+                            <span className="text-foreground/35 text-sm">⌕</span>
+                            <input
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                placeholder="search what loom remembers…"
+                                className="flex-1 bg-transparent outline-none text-sm placeholder:text-foreground/30"
+                            />
+                            {query && (
+                                <button
+                                    onClick={() => setQuery('')}
+                                    className="text-foreground/30 hover:text-foreground/70 text-xs"
+                                    aria-label="clear search"
+                                >
+                                    ✕
+                                </button>
+                            )}
+                        </div>
                     )}
 
                     {memories.length === 0 ? (
@@ -98,6 +131,12 @@ export default function Profile({
                             </p>
                             <p className="text-sm text-foreground/30 mt-3">
                                 keep chatting, i&apos;ll start to know you.
+                            </p>
+                        </div>
+                    ) : noMatches ? (
+                        <div className="text-center pt-12 animate-fade-in">
+                            <p className="font-display italic text-xl text-foreground/40">
+                                nothing matches “{query}”.
                             </p>
                         </div>
                     ) : (

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Geist } from "next/font/google";
 import "./globals.css";
+import Toaster from "@/components/Toaster";
 
 const fraunces = Fraunces({
   variable: "--font-display",
@@ -35,6 +36,7 @@ export default function RootLayout({
       </head>
       <body className={`${fraunces.variable} ${geist.variable} antialiased`}>
         {children}
+        <Toaster />
       </body>
     </html>
   );

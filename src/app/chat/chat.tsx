@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { createClient } from '@/lib/supabase/client';
 import AmbientBackground from '@/components/AmbientBackground';
 import ThemeToggle from '@/components/ThemeToggle';
+import CommandPalette, { type Command } from '@/components/CommandPalette';
+import { toast } from '@/components/Toaster';
 import type { ConversationSummary } from './page';
 
 type Message = {
@@ -40,7 +43,10 @@ export default function Chat({
 
     const bottomRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const abortRef = useRef<AbortController | null>(null);
+    const stoppedRef = useRef(false);
     const supabase = createClient();
+    const router = useRouter();
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -88,27 +94,26 @@ export default function Chat({
         e.stopPropagation();
         await supabase.from('conversations').delete().eq('id', id);
         setConversations((prev) => prev.filter((c) => c.id !== id));
+        toast('thread forgotten');
         if (id === conversationId) {
             newConversation();
         }
     }
 
-    async function sendMessage() {
-        if (!input.trim() || isStreaming) return;
-
-        const wasNew = !conversationId;
-        const userMessage: Message = { role: 'user', content: input.trim() };
-        const newMessages = [...messages, userMessage];
-        setMessages([...newMessages, { role: 'assistant', content: '' }]);
-        const sentText = userMessage.content;
-        setInput('');
+    // Core streaming routine, shared by send and regenerate.
+    async function runStream(history: Message[], userText: string, wasNew: boolean) {
+        setMessages([...history, { role: 'assistant', content: '' }]);
         setIsStreaming(true);
+        stoppedRef.current = false;
+        const controller = new AbortController();
+        abortRef.current = controller;
 
         try {
             const res = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: newMessages, conversationId }),
+                body: JSON.stringify({ messages: history, conversationId }),
+                signal: controller.signal,
             });
 
             if (!res.ok || !res.body) throw new Error('Request failed');
@@ -119,10 +124,9 @@ export default function Chat({
                 setConversationId(returnedId);
             }
 
-            // Keep the sidebar in sync.
             if (returnedId) {
                 const snippet =
-                    sentText.length > 40 ? sentText.slice(0, 40) + '…' : sentText;
+                    userText.length > 40 ? userText.slice(0, 40) + '…' : userText;
                 const now = new Date().toISOString();
                 setConversations((prev) => {
                     const without = prev.filter((c) => c.id !== returnedId);
@@ -156,18 +160,63 @@ export default function Chat({
                     return copy;
                 });
             }
-        } catch {
-            setMessages((prev) => {
-                const copy = [...prev];
-                copy[copy.length - 1] = {
-                    role: 'assistant',
-                    content: 'something went sideways. try again?',
-                };
-                return copy;
-            });
+        } catch (err) {
+            if (stoppedRef.current || (err as Error)?.name === 'AbortError') {
+                // user stopped: keep whatever streamed so far
+                setMessages((prev) => {
+                    const copy = [...prev];
+                    const last = copy[copy.length - 1];
+                    if (last && last.role === 'assistant' && last.content === '') {
+                        copy[copy.length - 1] = {
+                            role: 'assistant',
+                            content: '(stopped)',
+                        };
+                    }
+                    return copy;
+                });
+            } else {
+                setMessages((prev) => {
+                    const copy = [...prev];
+                    copy[copy.length - 1] = {
+                        role: 'assistant',
+                        content: 'something went sideways. try again?',
+                    };
+                    return copy;
+                });
+            }
         } finally {
             setIsStreaming(false);
+            abortRef.current = null;
         }
+    }
+
+    async function sendMessage() {
+        if (!input.trim() || isStreaming) return;
+        const wasNew = !conversationId;
+        const userText = input.trim();
+        const history = [...messages, { role: 'user' as const, content: userText }];
+        setInput('');
+        await runStream(history, userText, wasNew);
+    }
+
+    function stopGenerating() {
+        stoppedRef.current = true;
+        abortRef.current?.abort();
+    }
+
+    async function regenerate() {
+        if (isStreaming) return;
+        // Drop the trailing assistant message and resend the last user turn.
+        let lastUserIdx = -1;
+        for (let i = messages.length - 1; i >= 0; i--) {
+            if (messages[i].role === 'user') {
+                lastUserIdx = i;
+                break;
+            }
+        }
+        if (lastUserIdx === -1) return;
+        const history = messages.slice(0, lastUserIdx + 1);
+        await runStream(history, history[lastUserIdx].content, false);
     }
 
     function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -181,15 +230,55 @@ export default function Chat({
         try {
             await navigator.clipboard.writeText(text);
             setCopiedIndex(i);
+            toast('copied to clipboard');
             setTimeout(() => setCopiedIndex((c) => (c === i ? null : c)), 1500);
         } catch {
             // ignore
         }
     }
 
+    const canRegenerate =
+        !isStreaming &&
+        messages.length >= 2 &&
+        messages[messages.length - 1].role === 'assistant';
+
+    // Commands for the Cmd+K palette.
+    const commands = useMemo<Command[]>(() => {
+        const base: Command[] = [
+            { id: 'new', label: 'start a new thread', hint: 'new', run: newConversation },
+            {
+                id: 'profile',
+                label: 'what i remember about you',
+                hint: 'profile',
+                run: () => router.push('/profile'),
+            },
+            {
+                id: 'theme',
+                label: 'toggle light / dark',
+                hint: 'theme',
+                run: () => {
+                    const next = !document.documentElement.classList.contains('dark');
+                    document.documentElement.classList.toggle('dark', next);
+                    try {
+                        localStorage.setItem('loom-theme', next ? 'dark' : 'light');
+                    } catch {}
+                },
+            },
+        ];
+        const threadCmds: Command[] = conversations.map((c) => ({
+            id: c.id,
+            label: c.title,
+            hint: 'thread',
+            run: () => openConversation(c.id),
+        }));
+        return [...base, ...threadCmds];
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [conversations, conversationId, isStreaming]);
+
     return (
         <div className="flex h-screen overflow-hidden">
             <AmbientBackground intensity="ambient" />
+            <CommandPalette commands={commands} />
 
             {/* Sidebar */}
             <aside
@@ -217,8 +306,13 @@ export default function Chat({
                     </button>
                 </div>
 
-                <div className="mt-4 px-3 text-[10px] uppercase tracking-[0.2em] text-foreground/35">
-                    threads
+                <div className="mt-4 px-3 flex items-center justify-between">
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-foreground/35">
+                        threads
+                    </span>
+                    <span className="text-[10px] text-foreground/25 border border-border/60 rounded px-1.5 py-0.5">
+                        ⌘K
+                    </span>
                 </div>
                 <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
                     {conversations.length === 0 && (
@@ -324,6 +418,8 @@ export default function Chat({
                                     );
                                 }
 
+                                const isLast = i === messages.length - 1;
+
                                 return (
                                     <div key={i} className="group space-y-2 animate-fade-up">
                                         <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-primary/60">
@@ -335,6 +431,14 @@ export default function Chat({
                                                     className="opacity-0 group-hover:opacity-100 transition-opacity text-foreground/40 hover:text-primary normal-case tracking-normal text-[11px]"
                                                 >
                                                     {copiedIndex === i ? 'copied' : 'copy'}
+                                                </button>
+                                            )}
+                                            {isLast && canRegenerate && (
+                                                <button
+                                                    onClick={regenerate}
+                                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-foreground/40 hover:text-primary normal-case tracking-normal text-[11px]"
+                                                >
+                                                    retry
                                                 </button>
                                             )}
                                         </div>
@@ -380,17 +484,27 @@ export default function Chat({
                                 className="flex-1 resize-none bg-transparent border-none outline-none text-[15px] placeholder:text-foreground/30 py-1.5 leading-relaxed disabled:opacity-60"
                                 disabled={isStreaming}
                             />
-                            <button
-                                onClick={sendMessage}
-                                disabled={!input.trim() || isStreaming}
-                                aria-label="send"
-                                className="shrink-0 mb-0.5 grid place-items-center h-9 w-9 rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-all disabled:opacity-25 disabled:cursor-not-allowed active:scale-95"
-                            >
-                                <span className="text-lg leading-none -mt-0.5">↑</span>
-                            </button>
+                            {isStreaming ? (
+                                <button
+                                    onClick={stopGenerating}
+                                    aria-label="stop"
+                                    className="shrink-0 mb-0.5 grid place-items-center h-9 w-9 rounded-full border border-border bg-background hover:border-primary/50 transition-all active:scale-95"
+                                >
+                                    <span className="block h-3 w-3 rounded-[3px] bg-primary" />
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={sendMessage}
+                                    disabled={!input.trim()}
+                                    aria-label="send"
+                                    className="shrink-0 mb-0.5 grid place-items-center h-9 w-9 rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-all disabled:opacity-25 disabled:cursor-not-allowed active:scale-95"
+                                >
+                                    <span className="text-lg leading-none -mt-0.5">↑</span>
+                                </button>
+                            )}
                         </div>
                         <p className="text-center text-[10px] text-foreground/30 mt-3 tracking-wide">
-                            loom remembers what matters · enter to send · shift+enter for a new line
+                            press ⌘K for commands · enter to send · shift+enter for a new line
                         </p>
                     </div>
                 </footer>

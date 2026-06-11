@@ -174,6 +174,31 @@ body {
   font-family: var(--font-display), Georgia, serif;
 }
 
+/* Keyboard focus only — clean rings without bothering mouse users */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+button,
+a,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth theme transition for surfaces (not transforms, to avoid jank) */
+body,
+.aurora-blob,
+aside,
+header,
+input,
+textarea {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.3s;
+  transition-timing-function: ease;
+}
+
 /* A warm gradient ink for emphasis text */
 .text-gradient {
   background-image: linear-gradient(135deg, var(--foreground), var(--primary));
