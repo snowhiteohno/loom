@@ -20,9 +20,10 @@ export async function POST(req: NextRequest) {
         messages: { role: 'user' | 'assistant'; content: string }[];
         conversationId?: string | null;
     };
-
-    let conversationId = incomingId ?? null;
-    if (!conversationId) {
+    let conversationId: string;
+    if (incomingId) {
+        conversationId = incomingId;
+    } else {
         const { data: conv, error } = await supabase
             .from('conversations')
             .insert({ user_id: user.id })
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
         }
         conversationId = conv.id;
     }
+
 
     const lastMessage = messages[messages.length - 1];
     if (lastMessage?.role === 'user') {
