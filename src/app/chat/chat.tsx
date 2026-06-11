@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 
@@ -82,8 +83,14 @@ export default function Chat({ initialConversationId, initialMessages }: Props) 
 
     return (
         <div className="flex flex-col h-screen bg-background">
-            <header className="px-8 py-6 md:px-12 md:py-8">
+            <header className="px-8 py-6 md:px-12 md:py-8 flex items-center justify-between">
                 <span className="font-display italic text-2xl text-foreground/90">loom</span>
+                <Link
+                    href="/profile"
+                    className="text-[10px] uppercase tracking-[0.2em] text-foreground/60 hover:text-foreground transition-colors"
+                >
+                    what i remember →
+                </Link>
             </header>
 
             <main className="flex-1 overflow-y-auto px-8 md:px-12">

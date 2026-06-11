@@ -29,6 +29,11 @@ export default function Profile({
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const supabase = createClient();
 
+    async function signOut() {
+        await supabase.auth.signOut();
+        window.location.href = '/login';
+    }
+
     async function deleteMemory(id: string) {
         setDeletingId(id);
         const { error } = await supabase.from('memories').delete().eq('id', id);
@@ -110,6 +115,14 @@ export default function Profile({
                             })}
                         </div>
                     )}
+                    <div className="mt-24 pt-8 border-t border-foreground/10">
+                        <button
+                            onClick={signOut}
+                            className="text-[10px] uppercase tracking-[0.2em] text-foreground/40 hover:text-foreground/80 transition-colors"
+                        >
+                            sign out
+                        </button>
+                    </div>
                 </div>
             </main>
         </div>
