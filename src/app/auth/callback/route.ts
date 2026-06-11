@@ -5,15 +5,15 @@ export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
     const code = searchParams.get('code')
     const next = searchParams.get('next') ?? '/'
-
     if (code) {
-        const supabase = await createClient()
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        const supabase = await createClient();
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (!error) {
-            return NextResponse.redirect(`${origin}${next}`)
+            return NextResponse.redirect(`${origin}/`);
         }
+        console.error('[auth/callback] exchange failed:', error.message, error);
+    } else {
+        console.error('[auth/callback] no code in URL');
     }
 
-    // Auth failed, bounce back to login with a flag
-    return NextResponse.redirect(`${origin}/login?error=auth_failed`)
-}
+    return NextResponse.redirect(`${origin}/login?error=auth_failed`);
